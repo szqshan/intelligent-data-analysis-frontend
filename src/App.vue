@@ -52,6 +52,10 @@
             <el-icon><Setting /></el-icon>
             <span>系统设置</span>
           </el-menu-item>
+          <el-menu-item index="/api-test">
+            <el-icon><Monitor /></el-icon>
+            <span>API测试</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -177,7 +181,8 @@ const getCurrentPageTitle = () => {
     '/chat': '智能对话',
     '/reports': '报告中心',
     '/tools': '工具面板',
-    '/settings': '系统设置'
+    '/settings': '系统设置',
+    '/api-test': 'API测试'
   }
   return routeMap[route.path] || '未知页面'
 }

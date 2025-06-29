@@ -50,6 +50,15 @@ export const routes = [
       title: '系统设置',
       icon: 'Setting'
     }
+  },
+  {
+    path: '/api-test',
+    name: 'ApiTest',
+    component: () => import('../views/ApiTest.vue'),
+    meta: {
+      title: 'API测试',
+      icon: 'Monitor'
+    }
   }
 ]
 

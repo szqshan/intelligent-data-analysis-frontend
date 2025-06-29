@@ -5,11 +5,11 @@
 | 阶段 | 状态 | 完成时间 | 实际用时 | 进度 |
 |------|------|----------|----------|------|
 | **Phase 1: 基础架构搭建** | ✅ 已完成 | 2024-12-29 | 2天 | 100% |
-| **Phase 2: 核心功能开发** | 🔄 待开始 | - | - | 0% |
+| **Phase 2: 核心功能开发** | 📋 方案已定 | 预计2025-01-05 | - | 0% |
 | **Phase 3: 报告展示开发** | ⏳ 计划中 | - | - | 0% |
 | **Phase 4: 优化和部署** | ⏳ 计划中 | - | - | 0% |
 
-**总体进度**: 25% ✅
+**总体进度**: 25% ✅ (Phase 1完成 + Phase 2方案制定)
 
 ---
 
@@ -238,7 +238,7 @@ temp/data-viz-reference/src/
 
 ---
 
-## 🔄 Phase 2: 核心功能开发 (Week 2) - 下一步计划
+## 🔄 Phase 2: 核心功能开发 (Week 2) - 详细实施方案
 
 > **计划开始**: 2024-12-30  
 > **预计完成**: 2025-01-05  
@@ -249,7 +249,7 @@ temp/data-viz-reference/src/
 基于已完成的前端界面框架，开始集成后端API，实现真实的数据交互功能。
 
 #### 📋 主要任务
-1. **API服务集成** - 连接后端智能数据分析API
+1. **API服务集成** - 连接后端智能数据分析API (基于API_EXAMPLES.md)
 2. **聊天功能实现** - 实现实时聊天和流式响应
 3. **状态管理完善** - 用户状态、对话状态、工具状态管理
 4. **文件上传功能** - 支持数据文件上传和处理
@@ -257,15 +257,1480 @@ temp/data-viz-reference/src/
 
 #### 🔗 依赖关系
 - ✅ **前置条件**: Phase 1已完成 (前端界面框架)
-- 📋 **需要配合**: 后端API服务已部署并可访问
+- 📋 **需要配合**: 后端API服务 (localhost:5000) 已部署并可访问
+- 📋 **参考文档**: API_EXAMPLES.md 提供完整的接口文档
 
-### 📅 详细计划
+#### 🏗️ 技术架构设计
+```
+src/
+├── api/              # API服务层
+│   ├── index.js      # HTTP客户端配置
+│   ├── chat.js       # 聊天API
+│   ├── upload.js     # 文件上传API
+│   └── user.js       # 用户认证API
+├── stores/           # Pinia状态管理
+│   ├── user.js       # 用户状态
+│   ├── chat.js       # 聊天状态
+│   └── app.js        # 应用状态
+├── composables/      # 组合式函数
+│   ├── useChat.js    # 聊天逻辑
+│   └── useUpload.js  # 文件上传逻辑
+├── components/Chat/  # 聊天组件
+│   ├── MessageList.vue
+│   ├── MessageInput.vue
+│   ├── ToolVisualization.vue
+│   └── FileUpload.vue
+└── utils/            # 工具函数
+    ├── request.js    # HTTP请求封装
+    ├── message.js    # 消息处理
+    └── constants.js  # 常量定义
+```
+
+### 📅 详细实施计划 (分4天完成)
+
+### 🗓️ Day 1 (2024-12-30): API服务层搭建
+
+#### ✅ 核心任务清单
+- [ ] 创建HTTP客户端配置 (`src/utils/request.js`)
+- [ ] 创建用户认证API (`src/api/user.js`) 
+- [ ] 创建聊天API服务 (`src/api/chat.js`)
+- [ ] 创建文件上传API (`src/api/upload.js`)
+- [ ] 配置Pinia到项目入口文件
+
+#### 📋 具体实施步骤
+
+**步骤1**: 创建utils目录和HTTP客户端
+```bash
+mkdir src/utils
+mkdir src/api
+mkdir src/stores
+mkdir src/composables
+mkdir src/components/Chat
+mkdir src/components/Auth
+```
+
+**步骤2**: 实现HTTP请求封装 (`src/utils/request.js`)
+- 配置axios实例，设置baseURL为 `http://localhost:5000/api`
+- 添加请求拦截器，自动添加认证头信息
+- 添加响应拦截器，统一处理错误信息
+- 支持Element Plus消息提示
+
+**步骤3**: 实现用户认证API (`src/api/user.js`)
+- `validateAuth()`: 验证用户认证信息
+- `getSystemStatus()`: 获取系统状态
+- `healthCheck()`: 健康检查
+
+**步骤4**: 实现聊天API (`src/api/chat.js`)
+- `createConversation()`: 创建新对话
+- `getConversations()`: 获取对话列表  
+- `getMessages()`: 获取对话消息
+- `sendMessage()`: 发送消息，支持流式响应
+
+**步骤5**: 实现文件上传API (`src/api/upload.js`)
+- `uploadFile()`: 文件上传，支持进度回调
+- 支持多种文件格式验证
+
+### 🗓️ Day 2 (2024-12-31): 状态管理实现
+
+#### ✅ 核心任务清单
+- [ ] 创建用户状态管理 (`src/stores/user.js`)
+- [ ] 创建聊天状态管理 (`src/stores/chat.js`)
+- [ ] 创建应用全局状态 (`src/stores/app.js`)
+- [ ] 实现状态持久化
+- [ ] 测试状态管理功能
+
+#### 📋 具体实施步骤
+
+**步骤1**: 用户状态管理 (`src/stores/user.js`)
+- 状态: `userId`, `username`, `apiKey`, `isAuthenticated`
+- 计算属性: `hasValidCredentials`
+- 方法: `setCredentials()`, `validateAuth()`, `clearCredentials()`
+- 实现localStorage持久化
+
+**步骤2**: 聊天状态管理 (`src/stores/chat.js`)
+- 状态: `conversations`, `currentConversationId`, `messages`, `isLoading`, `toolCalls`
+- 计算属性: `currentConversation`, `currentMessages`
+- 方法: `createConversation()`, `sendMessage()`, `handleStreamResponse()`
+- 实现流式响应处理
+
+**步骤3**: 应用状态管理 (`src/stores/app.js`)
+- 主题设置、语言设置
+- 全局加载状态
+- 错误状态管理
+
+### 🗓️ Day 3 (2025-01-01): 聊天组件开发
+
+#### ✅ 核心任务清单
+- [ ] 创建消息列表组件 (`src/components/Chat/MessageList.vue`)
+- [ ] 创建消息输入组件 (`src/components/Chat/MessageInput.vue`)
+- [ ] 创建打字指示器组件
+- [ ] 实现消息格式化 (Markdown, 代码高亮)
+- [ ] 实现文件上传UI
+
+#### 📋 具体实施步骤
+
+**步骤1**: 消息列表组件 (`MessageList.vue`)
+- 支持用户和AI消息的不同样式
+- 集成Markdown渲染和代码高亮
+- 实现自动滚动到底部
+- 添加消息操作 (复制、重试)
+- 实现虚拟滚动 (性能优化)
+
+**步骤2**: 消息输入组件 (`MessageInput.vue`)
+- 多行文本输入，支持自动调整高度
+- 文件上传功能，支持拖拽上传
+- 快捷键支持 (Enter发送, Shift+Enter换行)
+- 文件预览和文件大小限制
+
+**步骤3**: 打字指示器和加载状态
+- CSS动画实现打字效果
+- 加载状态的用户友好提示
+
+### 🗓️ Day 4 (2025-01-02): 工具可视化和集成测试
+
+#### ✅ 核心任务清单
+- [ ] 创建工具调用可视化组件 (`src/components/Chat/ToolVisualization.vue`)
+- [ ] 创建认证对话框 (`src/components/Auth/AuthDialog.vue`)
+- [ ] 更新主聊天界面集成所有组件
+- [ ] 实现组合式函数 (`src/composables/useChat.js`)
+- [ ] 端到端功能测试
+
+#### 📋 具体实施步骤
+
+**步骤1**: 工具可视化组件 (`ToolVisualization.vue`)
+- 使用Timeline组件展示工具调用流程
+- 支持多种结果类型 (图表、表格、JSON)
+- 可折叠的详细信息显示
+- 错误状态的友好提示
+
+**步骤2**: 认证对话框 (`AuthDialog.vue`)
+- 用户凭据输入表单
+- 实时验证API密钥格式
+- 认证状态反馈
+
+**步骤3**: 主界面集成 (`ChatInterface.vue`)
+- 集成所有聊天相关组件
+- 实现认证流程
+- 错误边界处理
+
+**步骤4**: 组合式函数 (`useChat.js`)
+- 封装聊天逻辑
+- 文件上传逻辑
+- 消息处理工具函数
+
+**步骤5**: 功能测试
+- 用户认证流程测试
+- 消息发送和接收测试
+- 文件上传测试
+- 工具调用可视化测试
+- 错误处理测试
 
 ---
 
 ## 📅 Phase 2: 核心功能开发 (Week 2) - 详细实施步骤
 
-### Day 8-10: 聊天界面实现
+### 🗓️ Day 1 (2024-12-30): API服务层搭建
+
+#### 任务1: 创建HTTP客户端配置
+**文件**: `src/utils/request.js`
+```javascript
+// HTTP请求封装，支持认证和错误处理
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
+
+const API_BASE_URL = 'http://localhost:5000/api'
+
+// 创建axios实例
+const request = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+// 请求拦截器 - 添加认证信息
+request.interceptors.request.use(
+  config => {
+    const userStore = useUserStore()
+    if (userStore.userId && userStore.username && userStore.apiKey) {
+      config.headers['X-User-ID'] = userStore.userId
+      config.headers['X-Username'] = encodeURIComponent(userStore.username)
+      config.headers['X-API-Key'] = userStore.apiKey
+    }
+    return config
+  },
+  error => Promise.reject(error)
+)
+
+// 响应拦截器 - 统一错误处理
+request.interceptors.response.use(
+  response => response.data,
+  error => {
+    const message = error.response?.data?.message || error.message
+    ElMessage.error(message)
+    return Promise.reject(error)
+  }
+)
+
+export default request
+```
+
+#### 任务2: 创建用户认证API
+**文件**: `src/api/user.js`
+```javascript
+import request from '@/utils/request'
+
+export const userAPI = {
+  // 验证用户认证信息
+  validateAuth(userInfo) {
+    return request.get('/status', {
+      headers: {
+        'X-User-ID': userInfo.userId,
+        'X-Username': encodeURIComponent(userInfo.username),
+        'X-API-Key': userInfo.apiKey
+      }
+    })
+  },
+
+  // 获取系统状态
+  getSystemStatus() {
+    return request.get('/status')
+  },
+
+  // 健康检查
+  healthCheck() {
+    return request.get('/health')
+  }
+}
+```
+
+#### 任务3: 创建聊天API服务
+**文件**: `src/api/chat.js`
+```javascript
+import request from '@/utils/request'
+
+export const chatAPI = {
+  // 创建新对话
+  createConversation(data) {
+    return request.post('/conversations', data)
+  },
+
+  // 获取对话列表
+  getConversations(userId) {
+    return request.get('/conversations', { params: { user_id: userId } })
+  },
+
+  // 获取对话消息
+  getMessages(conversationId) {
+    return request.get(`/conversations/${conversationId}/messages`)
+  },
+
+  // 发送消息 (支持流式响应)
+  async sendMessage(conversationId, data) {
+    const response = await fetch(`${request.defaults.baseURL}/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: {
+        ...request.defaults.headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return response // 返回流式响应
+  }
+}
+```
+
+#### 任务4: 创建文件上传API
+**文件**: `src/api/upload.js`
+```javascript
+import request from '@/utils/request'
+
+export const uploadAPI = {
+  // 上传文件
+  uploadFile(file, userId, username) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('userId', userId)
+    formData.append('username', username)
+    
+    return request.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        console.log(`Upload progress: ${progress}%`)
+      }
+    })
+  }
+}
+```
+
+### 🗓️ Day 2 (2024-12-31): 状态管理实现
+
+#### 任务1: 用户状态管理
+**文件**: `src/stores/user.js`
+```javascript
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { userAPI } from '@/api/user'
+
+export const useUserStore = defineStore('user', () => {
+  // 状态
+  const userId = ref(localStorage.getItem('userId') || '')
+  const username = ref(localStorage.getItem('username') || '')
+  const apiKey = ref(localStorage.getItem('apiKey') || '')
+  const isAuthenticated = ref(false)
+  
+  // 计算属性
+  const hasValidCredentials = computed(() => {
+    return userId.value && username.value && apiKey.value
+  })
+  
+  // 方法
+  const setCredentials = (credentials) => {
+    userId.value = credentials.userId
+    username.value = credentials.username
+    apiKey.value = credentials.apiKey
+    
+    // 持久化存储
+    localStorage.setItem('userId', credentials.userId)
+    localStorage.setItem('username', credentials.username)
+    localStorage.setItem('apiKey', credentials.apiKey)
+  }
+  
+  const validateAuth = async () => {
+    if (!hasValidCredentials.value) {
+      isAuthenticated.value = false
+      return false
+    }
+    
+    try {
+      await userAPI.validateAuth({
+        userId: userId.value,
+        username: username.value,
+        apiKey: apiKey.value
+      })
+      isAuthenticated.value = true
+      return true
+    } catch (error) {
+      isAuthenticated.value = false
+      return false
+    }
+  }
+  
+  const clearCredentials = () => {
+    userId.value = ''
+    username.value = ''
+    apiKey.value = ''
+    isAuthenticated.value = false
+    
+    localStorage.removeItem('userId')
+    localStorage.removeItem('username')
+    localStorage.removeItem('apiKey')
+  }
+  
+  return {
+    // 状态
+    userId,
+    username,
+    apiKey,
+    isAuthenticated,
+    // 计算属性
+    hasValidCredentials,
+    // 方法
+    setCredentials,
+    validateAuth,
+    clearCredentials
+  }
+})
+```
+
+#### 任务2: 聊天状态管理
+**文件**: `src/stores/chat.js`
+```javascript
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { chatAPI } from '@/api/chat'
+import { useUserStore } from './user'
+
+export const useChatStore = defineStore('chat', () => {
+  const userStore = useUserStore()
+  
+  // 状态
+  const conversations = ref([])
+  const currentConversationId = ref(null)
+  const messages = ref([])
+  const isLoading = ref(false)
+  const toolCalls = ref([])
+  const uploadProgress = ref(0)
+  
+  // 计算属性
+  const currentConversation = computed(() => 
+    conversations.value.find(c => c.id === currentConversationId.value)
+  )
+  
+  const currentMessages = computed(() => 
+    messages.value.filter(m => m.conversation_id === currentConversationId.value)
+  )
+  
+  // 方法
+  const createConversation = async (title = '', description = '') => {
+    try {
+      const response = await chatAPI.createConversation({
+        title: title || '新对话',
+        description,
+        user_id: userStore.userId,
+        api_key: userStore.apiKey
+      })
+      
+      const newConversation = response.conversation
+      conversations.value.unshift(newConversation)
+      currentConversationId.value = newConversation.id
+      
+      return newConversation
+    } catch (error) {
+      console.error('创建对话失败:', error)
+      throw error
+    }
+  }
+  
+  const loadConversations = async () => {
+    try {
+      const response = await chatAPI.getConversations(userStore.userId)
+      conversations.value = response.conversations || []
+    } catch (error) {
+      console.error('加载对话失败:', error)
+    }
+  }
+  
+  const selectConversation = async (conversationId) => {
+    currentConversationId.value = conversationId
+    await loadMessages(conversationId)
+  }
+  
+  const loadMessages = async (conversationId) => {
+    try {
+      const response = await chatAPI.getMessages(conversationId)
+      messages.value = response.messages || []
+    } catch (error) {
+      console.error('加载消息失败:', error)
+    }
+  }
+  
+  const sendMessage = async (text, file = null) => {
+    if (!currentConversationId.value) {
+      await createConversation()
+    }
+    
+    try {
+      isLoading.value = true
+      
+      // 添加用户消息到本地状态
+      const userMessage = {
+        id: Date.now().toString(),
+        conversation_id: currentConversationId.value,
+        role: 'user',
+        content: text,
+        timestamp: new Date().toISOString(),
+        file_info: file ? { name: file.name, size: file.size } : null
+      }
+      messages.value.push(userMessage)
+      
+      // 发送到后端
+      const response = await chatAPI.sendMessage(currentConversationId.value, {
+        message: text,
+        file: file
+      })
+      
+      // 处理流式响应
+      await handleStreamResponse(response)
+      
+    } catch (error) {
+      console.error('发送消息失败:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  const handleStreamResponse = async (response) => {
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    
+    let assistantMessage = {
+      id: Date.now().toString(),
+      conversation_id: currentConversationId.value,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString()
+    }
+    
+    messages.value.push(assistantMessage)
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            if (data === '[DONE]') return
+            
+            try {
+              const parsed = JSON.parse(data)
+              
+              if (parsed.type === 'message') {
+                assistantMessage.content += parsed.content
+              } else if (parsed.type === 'tool_call') {
+                toolCalls.value.push(parsed.tool_call)
+              } else if (parsed.type === 'tool_result') {
+                const toolCall = toolCalls.value.find(tc => tc.id === parsed.tool_call_id)
+                if (toolCall) {
+                  toolCall.result = parsed.result
+                }
+              }
+            } catch (e) {
+              console.warn('解析SSE数据失败:', e)
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  }
+  
+  return {
+    // 状态
+    conversations,
+    currentConversationId,
+    messages,
+    isLoading,
+    toolCalls,
+    uploadProgress,
+    // 计算属性
+    currentConversation,
+    currentMessages,
+    // 方法
+    createConversation,
+    loadConversations,
+    selectConversation,
+    loadMessages,
+    sendMessage
+  }
+})
+```
+
+### 🗓️ Day 3 (2025-01-01): 聊天组件开发
+
+#### 任务1: 消息列表组件
+**文件**: `src/components/Chat/MessageList.vue`
+```vue
+<template>
+  <div class="message-list" ref="messageContainer">
+    <div 
+      v-for="message in messages" 
+      :key="message.id"
+      class="message-wrapper"
+      :class="{ 'user-message': message.role === 'user' }"
+    >
+      <div class="message">
+        <div class="message-avatar">
+          <el-avatar :size="32">
+            <el-icon v-if="message.role === 'user'"><User /></el-icon>
+            <el-icon v-else><Cpu /></el-icon>
+          </el-avatar>
+        </div>
+        <div class="message-content">
+          <div class="message-text" v-html="formatMessage(message.content)"></div>
+          <div v-if="message.file_info" class="file-info">
+            <el-tag type="info">
+              <el-icon><Document /></el-icon>
+              {{ message.file_info.name }}
+            </el-tag>
+          </div>
+          <div class="message-time">
+            {{ formatTime(message.timestamp) }}
+          </div>
+        </div>
+        <div class="message-actions">
+          <el-button text @click="copyMessage(message)">
+            <el-icon><CopyDocument /></el-icon>
+          </el-button>
+          <el-button text @click="retryMessage(message)" v-if="message.role === 'user'">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 打字指示器 -->
+    <div v-if="loading" class="typing-indicator">
+      <div class="message">
+        <div class="message-avatar">
+          <el-avatar :size="32">
+            <el-icon><Cpu /></el-icon>
+          </el-avatar>
+        </div>
+        <div class="message-content">
+          <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 滚动到底部按钮 -->
+    <el-button 
+      v-if="showScrollButton"
+      @click="scrollToBottom"
+      class="scroll-button"
+      type="primary"
+      :icon="ArrowDown"
+      circle
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref, nextTick, watch, onMounted } from 'vue'
+import { marked } from 'marked'
+import hljs from 'highlight.js'
+import { ElMessage } from 'element-plus'
+
+const props = defineProps({
+  messages: {
+    type: Array,
+    default: () => []
+  },
+  loading: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['retry'])
+
+const messageContainer = ref(null)
+const showScrollButton = ref(false)
+
+// 配置marked
+marked.setOptions({
+  highlight: function(code, lang) {
+    const language = hljs.getLanguage(lang) ? lang : 'plaintext'
+    return hljs.highlight(code, { language }).value
+  },
+  langPrefix: 'hljs language-'
+})
+
+// 格式化消息内容
+const formatMessage = (content) => {
+  return marked(content)
+}
+
+// 格式化时间
+const formatTime = (timestamp) => {
+  return new Date(timestamp).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 滚动到底部
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messageContainer.value) {
+      messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+    }
+  })
+}
+
+// 复制消息
+const copyMessage = async (message) => {
+  try {
+    await navigator.clipboard.writeText(message.content)
+    ElMessage.success('消息已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败')
+  }
+}
+
+// 重试消息
+const retryMessage = (message) => {
+  emit('retry', message)
+}
+
+// 监听消息变化，自动滚动
+watch(() => props.messages.length, () => {
+  scrollToBottom()
+})
+
+// 监听滚动，显示/隐藏滚动按钮
+const handleScroll = () => {
+  if (messageContainer.value) {
+    const { scrollTop, scrollHeight, clientHeight } = messageContainer.value
+    showScrollButton.value = scrollHeight - scrollTop - clientHeight > 100
+  }
+}
+
+onMounted(() => {
+  messageContainer.value?.addEventListener('scroll', handleScroll)
+})
+</script>
+
+<style scoped>
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  position: relative;
+}
+
+.message-wrapper {
+  margin-bottom: 1rem;
+}
+
+.message {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.user-message .message {
+  flex-direction: row-reverse;
+}
+
+.message-content {
+  flex: 1;
+  background: var(--el-bg-color-page);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  position: relative;
+}
+
+.user-message .message-content {
+  background: var(--el-color-primary-light-9);
+}
+
+.message-text {
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.file-info {
+  margin-top: 0.5rem;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: var(--el-text-color-placeholder);
+  margin-top: 0.5rem;
+}
+
+.message-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.message:hover .message-actions {
+  opacity: 1;
+}
+
+.typing-indicator {
+  margin-bottom: 1rem;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+}
+
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+.typing-dots span:nth-child(3) { animation-delay: 0s; }
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.scroll-button {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+</style>
+```
+
+#### 任务2: 消息输入组件
+**文件**: `src/components/Chat/MessageInput.vue`
+```vue
+<template>
+  <div class="message-input">
+    <div class="input-wrapper">
+      <!-- 文件上传 -->
+      <el-upload
+        ref="uploadRef"
+        :show-file-list="false"
+        :before-upload="handleFileSelect"
+        accept=".csv,.xlsx,.json,.txt,.pdf"
+        :disabled="disabled"
+      >
+        <el-button :icon="Paperclip" circle :disabled="disabled" />
+      </el-upload>
+      
+      <!-- 文本输入框 -->
+      <el-input
+        v-model="inputText"
+        type="textarea"
+        :rows="1"
+        :autosize="{ minRows: 1, maxRows: 5 }"
+        placeholder="输入消息... (Shift+Enter换行，Enter发送)"
+        @keydown="handleKeydown"
+        :disabled="disabled"
+        class="message-textarea"
+      />
+      
+      <!-- 发送按钮 -->
+      <el-button
+        type="primary"
+        :icon="Send"
+        @click="handleSend"
+        :disabled="!canSend"
+        :loading="disabled"
+      >
+        发送
+      </el-button>
+    </div>
+    
+    <!-- 文件预览 -->
+    <div v-if="selectedFile" class="file-preview">
+      <el-tag closable @close="selectedFile = null">
+        <el-icon><Document /></el-icon>
+        {{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})
+      </el-tag>
+    </div>
+    
+    <!-- 输入提示 -->
+    <div class="input-hint">
+      <span>支持上传: CSV、Excel、JSON、TXT、PDF文件</span>
+      <span>快捷键: Ctrl+Enter发送</span>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+
+const props = defineProps({
+  disabled: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['send', 'upload'])
+
+const inputText = ref('')
+const selectedFile = ref(null)
+
+const canSend = computed(() => {
+  return (inputText.value.trim() || selectedFile.value) && !props.disabled
+})
+
+const handleSend = () => {
+  if (!canSend.value) return
+  
+  emit('send', inputText.value.trim(), selectedFile.value)
+  inputText.value = ''
+  selectedFile.value = null
+}
+
+const handleKeydown = (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    handleSend()
+  } else if (event.ctrlKey && event.key === 'Enter') {
+    event.preventDefault()
+    handleSend()
+  }
+}
+
+const handleFileSelect = (file) => {
+  // 文件大小限制 (10MB)
+  const maxSize = 10 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('文件大小不能超过10MB')
+    return false
+  }
+  
+  selectedFile.value = file
+  return false // 阻止自动上传
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+</script>
+
+<style scoped>
+.message-input {
+  padding: 1rem;
+  border-top: 1px solid var(--el-border-color);
+  background: var(--el-bg-color);
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.message-textarea {
+  flex: 1;
+}
+
+.file-preview {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: var(--el-bg-color-page);
+  border-radius: 6px;
+}
+
+.input-hint {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--el-text-color-placeholder);
+}
+
+@media (max-width: 768px) {
+  .input-hint {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+</style>
+```
+
+### 🗓️ Day 4 (2025-01-02): 工具可视化和集成测试
+
+#### 任务1: 工具调用可视化组件
+**文件**: `src/components/Chat/ToolVisualization.vue`
+```vue
+<template>
+  <div class="tool-visualization" v-if="toolCalls.length > 0">
+    <el-card class="tool-card">
+      <template #header>
+        <div class="tool-header">
+          <el-icon class="tool-icon"><Tools /></el-icon>
+          <span class="tool-title">AI工具调用过程</span>
+          <el-tag :type="statusType" size="small">{{ statusText }}</el-tag>
+        </div>
+      </template>
+      
+      <el-timeline>
+        <el-timeline-item
+          v-for="(tool, index) in toolCalls"
+          :key="tool.id"
+          :type="getTimelineType(tool.status)"
+          :icon="getTimelineIcon(tool.status)"
+          :timestamp="formatTime(tool.timestamp)"
+        >
+          <div class="tool-step">
+            <div class="step-header">
+              <h4>{{ tool.function?.name || `工具 ${index + 1}` }}</h4>
+              <el-tag :type="getStatusType(tool.status)" size="small">
+                {{ getStatusText(tool.status) }}
+              </el-tag>
+            </div>
+            
+            <div class="step-description">
+              {{ tool.function?.description || '执行数据分析工具' }}
+            </div>
+            
+            <!-- 输入参数 -->
+            <el-collapse v-if="tool.function?.arguments" class="step-details">
+              <el-collapse-item title="输入参数" name="input">
+                <pre class="code-block">{{ formatJSON(tool.function.arguments) }}</pre>
+              </el-collapse-item>
+            </el-collapse>
+            
+            <!-- 执行结果 -->
+            <el-collapse v-if="tool.result" class="step-details">
+              <el-collapse-item title="执行结果" name="output">
+                <div v-if="tool.result.type === 'chart'" class="chart-result">
+                  <img :src="tool.result.data" alt="生成的图表" class="chart-image" />
+                </div>
+                <div v-else-if="tool.result.type === 'table'" class="table-result">
+                  <el-table :data="tool.result.data" style="width: 100%">
+                    <el-table-column
+                      v-for="column in Object.keys(tool.result.data[0] || {})"
+                      :key="column"
+                      :prop="column"
+                      :label="column"
+                    />
+                  </el-table>
+                </div>
+                <pre v-else class="code-block">{{ formatResult(tool.result) }}</pre>
+              </el-collapse-item>
+            </el-collapse>
+            
+            <!-- 错误信息 -->
+            <el-alert
+              v-if="tool.error"
+              type="error"
+              :title="tool.error.message"
+              :description="tool.error.details"
+              show-icon
+              class="error-alert"
+            />
+          </div>
+        </el-timeline-item>
+      </el-timeline>
+    </el-card>
+  </div>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+
+const props = defineProps({
+  toolCalls: {
+    type: Array,
+    default: () => []
+  }
+})
+
+const statusType = computed(() => {
+  if (props.toolCalls.some(tool => tool.status === 'error')) return 'danger'
+  if (props.toolCalls.every(tool => tool.status === 'completed')) return 'success'
+  return 'warning'
+})
+
+const statusText = computed(() => {
+  if (props.toolCalls.some(tool => tool.status === 'error')) return '执行失败'
+  if (props.toolCalls.every(tool => tool.status === 'completed')) return '执行完成'
+  return '执行中'
+})
+
+const getTimelineType = (status) => {
+  switch (status) {
+    case 'completed': return 'success'
+    case 'error': return 'danger'
+    case 'running': return 'warning'
+    default: return 'info'
+  }
+}
+
+const getTimelineIcon = (status) => {
+  switch (status) {
+    case 'completed': return 'Check'
+    case 'error': return 'Close'
+    case 'running': return 'Loading'
+    default: return 'Clock'
+  }
+}
+
+const getStatusType = (status) => {
+  switch (status) {
+    case 'completed': return 'success'
+    case 'error': return 'danger'
+    case 'running': return 'warning'
+    default: return 'info'
+  }
+}
+
+const getStatusText = (status) => {
+  switch (status) {
+    case 'completed': return '完成'
+    case 'error': return '失败'
+    case 'running': return '执行中'
+    default: return '等待'
+  }
+}
+
+const formatTime = (timestamp) => {
+  return new Date(timestamp).toLocaleTimeString('zh-CN')
+}
+
+const formatJSON = (obj) => {
+  return JSON.stringify(obj, null, 2)
+}
+
+const formatResult = (result) => {
+  if (typeof result === 'object') {
+    return JSON.stringify(result, null, 2)
+  }
+  return result
+}
+</script>
+
+<style scoped>
+.tool-visualization {
+  margin: 1rem 0;
+}
+
+.tool-card {
+  border: 1px solid var(--el-color-primary-light-7);
+}
+
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tool-icon {
+  color: var(--el-color-primary);
+}
+
+.tool-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.tool-step {
+  padding: 0.5rem 0;
+}
+
+.step-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.step-header h4 {
+  margin: 0;
+  color: var(--el-text-color-primary);
+}
+
+.step-description {
+  color: var(--el-text-color-regular);
+  margin-bottom: 0.75rem;
+}
+
+.step-details {
+  margin: 0.75rem 0;
+}
+
+.code-block {
+  background: var(--el-fill-color-light);
+  padding: 1rem;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.chart-result {
+  text-align: center;
+}
+
+.chart-image {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+}
+
+.table-result {
+  margin: 0.5rem 0;
+}
+
+.error-alert {
+  margin-top: 0.75rem;
+}
+</style>
+```
+
+#### 任务2: 更新ChatInterface.vue集成所有组件
+**文件**: `src/views/ChatInterface.vue` (大幅更新)
+```vue
+<template>
+  <div class="chat-interface">
+    <!-- 认证弹窗 -->
+    <AuthDialog v-model="showAuthDialog" @authenticated="handleAuthenticated" />
+    
+    <div class="chat-container">
+      <!-- 消息列表 -->
+      <MessageList 
+        :messages="chatStore.currentMessages"
+        :loading="chatStore.isLoading"
+        @retry="retryMessage"
+        class="message-area"
+      />
+      
+      <!-- 工具调用可视化 -->
+      <ToolVisualization 
+        :tool-calls="chatStore.toolCalls"
+        v-if="chatStore.toolCalls.length > 0"
+      />
+      
+      <!-- 输入区域 -->
+      <MessageInput 
+        @send="sendMessage"
+        :disabled="chatStore.isLoading || !userStore.isAuthenticated"
+        class="input-area"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useChatStore } from '@/stores/chat'
+import { useUserStore } from '@/stores/user'
+import MessageList from '@/components/Chat/MessageList.vue'
+import MessageInput from '@/components/Chat/MessageInput.vue'
+import ToolVisualization from '@/components/Chat/ToolVisualization.vue'
+import AuthDialog from '@/components/Auth/AuthDialog.vue'
+
+const chatStore = useChatStore()
+const userStore = useUserStore()
+const showAuthDialog = ref(false)
+
+onMounted(async () => {
+  // 检查认证状态
+  if (!userStore.hasValidCredentials) {
+    showAuthDialog.value = true
+  } else {
+    const isValid = await userStore.validateAuth()
+    if (!isValid) {
+      showAuthDialog.value = true
+    } else {
+      await chatStore.loadConversations()
+    }
+  }
+})
+
+const handleAuthenticated = async () => {
+  showAuthDialog.value = false
+  await chatStore.loadConversations()
+}
+
+const sendMessage = async (text, file) => {
+  try {
+    await chatStore.sendMessage(text, file)
+  } catch (error) {
+    console.error('发送消息失败:', error)
+  }
+}
+
+const retryMessage = async (message) => {
+  try {
+    await chatStore.sendMessage(message.content)
+  } catch (error) {
+    console.error('重试消息失败:', error)
+  }
+}
+</script>
+
+<style scoped>
+.chat-interface {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.message-area {
+  flex: 1;
+  overflow: hidden;
+}
+
+.input-area {
+  flex-shrink: 0;
+}
+</style>
+```
+
+#### 任务3: 创建认证对话框组件
+**文件**: `src/components/Auth/AuthDialog.vue`
+```vue
+<template>
+  <el-dialog
+    v-model="visible"
+    title="用户认证"
+    width="500px"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+    :show-close="false"
+  >
+    <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+      <el-form-item label="用户ID" prop="userId">
+        <el-input v-model="form.userId" placeholder="请输入用户ID" />
+      </el-form-item>
+      
+      <el-form-item label="用户名" prop="username">
+        <el-input v-model="form.username" placeholder="请输入用户名" />
+      </el-form-item>
+      
+      <el-form-item label="API密钥" prop="apiKey">
+        <el-input
+          v-model="form.apiKey"
+          type="password"
+          placeholder="请输入Anthropic API密钥"
+          show-password
+        />
+        <div class="api-hint">
+          <el-text size="small" type="info">
+            需要有效的Anthropic API密钥 (sk-ant-api-...)
+          </el-text>
+        </div>
+      </el-form-item>
+    </el-form>
+    
+    <template #footer>
+      <el-button @click="handleCancel">取消</el-button>
+      <el-button type="primary" @click="handleConfirm" :loading="loading">
+        确认并验证
+      </el-button>
+    </template>
+  </el-dialog>
+</template>
+
+<script setup>
+import { ref, watch } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+
+const props = defineProps({
+  modelValue: Boolean
+})
+
+const emit = defineEmits(['update:modelValue', 'authenticated'])
+
+const userStore = useUserStore()
+const visible = ref(false)
+const loading = ref(false)
+const formRef = ref(null)
+
+const form = ref({
+  userId: userStore.userId,
+  username: userStore.username,
+  apiKey: userStore.apiKey
+})
+
+const rules = {
+  userId: [{ required: true, message: '请输入用户ID', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  apiKey: [
+    { required: true, message: '请输入API密钥', trigger: 'blur' },
+    { pattern: /^sk-ant-api-/, message: 'API密钥格式不正确', trigger: 'blur' }
+  ]
+}
+
+watch(() => props.modelValue, (val) => {
+  visible.value = val
+})
+
+watch(visible, (val) => {
+  emit('update:modelValue', val)
+})
+
+const handleConfirm = async () => {
+  try {
+    await formRef.value.validate()
+    
+    loading.value = true
+    
+    // 设置认证信息
+    userStore.setCredentials(form.value)
+    
+    // 验证认证信息
+    const isValid = await userStore.validateAuth()
+    
+    if (isValid) {
+      ElMessage.success('认证成功')
+      visible.value = false
+      emit('authenticated')
+    } else {
+      ElMessage.error('认证失败，请检查您的凭据')
+    }
+  } catch (error) {
+    console.error('认证失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleCancel = () => {
+  visible.value = false
+}
+</script>
+
+<style scoped>
+.api-hint {
+  margin-top: 0.25rem;
+}
+</style>
+```
+
+### 📋 Phase 2 完成验收标准
+
+#### ✅ 功能验收
+1. **用户认证**: 支持用户ID、用户名、API密钥认证
+2. **聊天功能**: 支持发送文本消息和文件上传
+3. **流式响应**: 实时显示AI回复过程
+4. **工具可视化**: 展示AI工具调用过程和结果
+5. **状态管理**: 用户状态和聊天状态持久化
+6. **错误处理**: 完善的错误提示和重试机制
+
+#### 🎯 技术验收
+1. **API集成**: 所有后端接口调用正常
+2. **组件复用**: 聊天相关组件可独立使用
+3. **响应式设计**: 支持桌面和移动端
+4. **性能优化**: 消息列表支持大量数据
+5. **代码质量**: 符合Vue 3最佳实践
+
+### Day 8-10: 聊天界面实现 (原有计划保留)
 
 #### 4.1 创建聊天页面布局
 ```vue
@@ -1331,6 +2796,27 @@ export default defineConfig({
 
 ## 📝 更新日志
 
+### v1.2 - 2024-12-30 📋  
+- 📋 **Phase 2 方案确定**: 4天详细实施计划制定完成
+- 🏗️ **技术架构细化**: API层、状态管理、组件层完整设计
+- 📁 **文件结构规划**: 21个核心文件的创建计划
+- 🎯 **验收标准**: 功能验收和技术验收标准明确
+- 🔄 **准备开始**: Phase 2核心功能开发即将启动
+
+### v1.1 - 2024-12-29 ✅
+- ✅ **Phase 1 完成**: 基础架构搭建完成
+- ✅ **项目结构**: 5个核心页面组件已创建完成
+  - `HomePage.vue` - 欢迎页面 (渐变背景 + 功能卡片)
+  - `ChatInterface.vue` - 智能对话页面 (消息列表 + 输入框)
+  - `ReportCenter.vue` - 报告中心 (报告列表 + 过滤器)
+  - `ToolsPanel.vue` - 工具面板 (分类标签 + 工具卡片)
+  - `Settings.vue` - 系统设置 (多标签页配置)
+- ✅ **响应式设计**: 完美支持桌面端、平板端、手机端
+- ✅ **布局系统**: 深色侧边栏导航 + 主内容区域
+- ✅ **Bug修复**: 主页黑屏问题 (CSS样式冲突) 已解决
+- 🔄 **Phase 2 准备**: API集成和核心功能开发计划已制定
+- 📊 **进度更新**: 整体项目进度达到25%
+
 ### v1.1 - 2024-12-29 ✅
 - ✅ **Phase 1 完成**: 基础架构搭建完成
 - ✅ **项目结构**: 5个核心页面组件已创建完成
@@ -1353,4 +2839,4 @@ export default defineConfig({
 
 ---
 
-**当前状态**: Phase 1 ✅ 已完成 | Phase 2 🔄 准备开始 
+**当前状态**: Phase 1 ✅ 已完成 | Phase 2 🔄 详细方案已制定，准备开始实施 
