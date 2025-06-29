@@ -28,21 +28,35 @@ export function useUpload() {
   function validateFile(file) {
     const errors = []
 
+    // 检查文件是否为空
+    if (!file || file.size === 0) {
+      errors.push('文件为空或无效')
+      return { isValid: false, errors }
+    }
+
     // 检查文件大小
     if (file.size > appStore.appConfig.maxFileSize) {
-      const maxSizeMB = appStore.appConfig.maxFileSize / (1024 * 1024)
-      errors.push(`文件大小超出限制 (最大 ${maxSizeMB}MB)`)
+      const maxSizeMB = Math.round(appStore.appConfig.maxFileSize / (1024 * 1024))
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2)
+      errors.push(`文件大小 ${fileSizeMB}MB 超出限制，最大允许 ${maxSizeMB}MB`)
     }
 
     // 检查文件类型
     const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
     if (!appStore.appConfig.allowedFileTypes.includes(fileExtension)) {
-      errors.push(`不支持的文件类型: ${fileExtension}`)
+      const supportedTypes = appStore.appConfig.allowedFileTypes.join(', ')
+      errors.push(`不支持的文件类型 "${fileExtension}"，支持的格式: ${supportedTypes}`)
     }
 
     // 检查文件名
     if (file.name.length > 255) {
-      errors.push('文件名过长')
+      errors.push(`文件名长度 ${file.name.length} 字符超出限制，最大 255 字符`)
+    }
+
+    // 检查文件名是否包含非法字符
+    const invalidChars = /[<>:"/\\|?*]/
+    if (invalidChars.test(file.name)) {
+      errors.push('文件名包含非法字符，请避免使用 < > : " / \\ | ? *')
     }
 
     return {
@@ -295,6 +309,54 @@ export function useUpload() {
     completedSize: completedUploads.value.reduce((sum, item) => sum + item.fileSize, 0)
   }))
 
+  // 获取文件格式分类信息
+  function getFileTypeCategory(fileExtension) {
+    const categories = appStore.appConfig.fileTypeCategories
+    
+    for (const [categoryKey, category] of Object.entries(categories)) {
+      if (category.types.includes(fileExtension.toLowerCase())) {
+        return {
+          key: categoryKey,
+          ...category
+        }
+      }
+    }
+    
+    return {
+      key: 'unknown',
+      types: [],
+      label: '未知格式',
+      description: '未知文件格式',
+      icon: 'Document',
+      color: '#909399'
+    }
+  }
+
+  // 检查文件是否可以进行数据分析
+  function canAnalyzeFile(file) {
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
+    return appStore.appConfig.analyticalFileTypes.includes(fileExtension)
+  }
+
+  // 检查文件类型能力
+  function getFileCapabilities(file) {
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
+    const category = getFileTypeCategory(fileExtension)
+    const canAnalyze = canAnalyzeFile(file)
+    
+    return {
+      canAnalyze,
+      canUpload: true, // 所有支持的格式都可以上传
+      category,
+      fileExtension,
+      capabilities: {
+        dataAnalysis: canAnalyze,
+        storage: true,
+        preview: file.type?.startsWith('image/') || false
+      }
+    }
+  }
+
   return {
     // 状态
     uploadQueue,
@@ -322,6 +384,11 @@ export function useUpload() {
     // 工具方法
     formatFileSize,
     formatSpeed,
-    formatRemainingTime
+    formatRemainingTime,
+
+    // 新添加的方法
+    getFileTypeCategory,
+    canAnalyzeFile,
+    getFileCapabilities
   }
 } 

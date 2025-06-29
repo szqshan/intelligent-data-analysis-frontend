@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    DropZone: typeof import('./src/components/Chat/DropZone.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBadge: typeof import('element-plus/es')['ElBadge']
@@ -55,6 +56,8 @@ declare module 'vue' {
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElUpload: typeof import('element-plus/es')['ElUpload']
+    FileManager: typeof import('./src/components/Chat/FileManager.vue')['default']
+    FileUpload: typeof import('./src/components/Chat/FileUpload.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     IconCommunity: typeof import('./src/components/icons/IconCommunity.vue')['default']
     IconDocumentation: typeof import('./src/components/icons/IconDocumentation.vue')['default']

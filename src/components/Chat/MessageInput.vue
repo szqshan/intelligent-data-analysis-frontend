@@ -55,24 +55,122 @@
       </div>
     </div>
 
-    <!-- 已选择的文件列表 -->
-    <div v-if="selectedFiles.length > 0" class="selected-files">
-      <div 
-        v-for="file in selectedFiles" 
-        :key="file.uid" 
-        class="file-item"
-      >
-        <el-icon><Document /></el-icon>
-        <span class="file-name">{{ file.name }}</span>
-        <span class="file-size">({{ formatFileSize(file.size) }})</span>
+    <!-- 增强的文件列表 -->
+    <div v-if="selectedFiles.length > 0" class="enhanced-file-list">
+      <div class="file-list-header">
+        <span class="file-count">已选择 {{ selectedFiles.length }} 个文件</span>
         <el-button 
           size="small" 
           text 
-          type="danger" 
-          @click="removeFile(file.uid)"
+          @click="clearSelectedFiles"
         >
           <el-icon><Close /></el-icon>
+          清空
         </el-button>
+      </div>
+      
+      <div class="file-items">
+        <div 
+          v-for="file in selectedFiles" 
+          :key="file.uid || file.id" 
+          class="enhanced-file-item"
+          :class="{
+            'uploading': file.status === 'uploading',
+            'completed': file.status === 'completed',
+            'failed': file.status === 'failed'
+          }"
+        >
+          <!-- 文件图标 -->
+          <div class="file-icon">
+            <el-icon size="20" :color="getFileTypeColor(file.type || file.raw?.type)">
+              <component :is="getFileTypeIcon(file.type || file.raw?.type)" />
+            </el-icon>
+          </div>
+          
+          <!-- 文件信息 -->
+          <div class="file-info">
+            <div class="file-name" :title="file.name">{{ file.name }}</div>
+            <div class="file-meta">
+              <span class="file-size">{{ formatFileSize(file.size) }}</span>
+              <span class="file-type">{{ getFileTypeLabel(file.type || file.raw?.type) }}</span>
+              <!-- 分析能力标识 -->
+              <span v-if="file.capabilities?.canAnalyze" class="analysis-badge">
+                <el-icon size="12"><TrendCharts /></el-icon>
+                可分析
+              </span>
+              <span v-else-if="file.capabilities?.category" class="category-badge" :style="{ color: file.capabilities.category.color }">
+                {{ file.capabilities.category.label }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- 文件预览 -->
+          <div v-if="canPreview(file)" class="file-preview" @click="previewFile(file)">
+            <img 
+              v-if="isImageFile(file)" 
+              :src="file.previewUrl" 
+              :alt="file.name"
+              class="preview-thumb"
+            />
+            <div v-else class="preview-placeholder">
+              <el-icon><View /></el-icon>
+            </div>
+          </div>
+          
+          <!-- 上传状态 -->
+          <div class="file-status">
+            <div v-if="file.status === 'uploading'" class="status-uploading">
+              <el-progress 
+                :percentage="file.progress || 0" 
+                :stroke-width="4"
+                :show-text="false"
+                status="active"
+              />
+              <span class="progress-text">{{ file.progress || 0 }}%</span>
+            </div>
+            <div v-else-if="file.status === 'completed'" class="status-completed">
+              <el-icon color="#67c23a"><CircleCheck /></el-icon>
+            </div>
+            <div v-else-if="file.status === 'failed'" class="status-failed">
+              <el-icon color="#f56c6c"><CircleClose /></el-icon>
+            </div>
+            <div v-else class="status-pending">
+              <el-icon color="#909399"><Clock /></el-icon>
+            </div>
+          </div>
+          
+          <!-- 操作按钮 -->
+          <div class="file-actions">
+            <el-button 
+              size="small" 
+              text 
+              type="danger" 
+              @click="removeFile(file.uid || file.id)"
+              :disabled="file.status === 'uploading'"
+            >
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 批量操作 -->
+      <div class="file-batch-actions">
+        <div class="batch-info">
+          总大小: {{ formatFileSize(totalFileSize) }}
+        </div>
+        <div class="batch-buttons">
+          <el-button 
+            size="small" 
+            @click="startBatchUpload"
+            :disabled="!hasPendingFiles || isUploading"
+            :loading="isUploading"
+            type="primary"
+          >
+            <el-icon><Upload /></el-icon>
+            {{ isUploading ? '上传中...' : '开始上传' }}
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -170,6 +268,7 @@ const uploadRef = ref(null)
 const messageText = ref('')
 const selectedFiles = ref([])
 const inputRows = ref(props.minRows)
+const isUploading = ref(false)
 
 // 计算属性
 const canSend = computed(() => {
@@ -197,6 +296,14 @@ const sendHint = computed(() => {
 const acceptedFileTypes = computed(() => {
   return appStore.appConfig.allowedFileTypes.join(',')
 })
+
+const totalFileSize = computed(() => 
+  selectedFiles.value.reduce((sum, file) => sum + file.size, 0)
+)
+
+const hasPendingFiles = computed(() => 
+  selectedFiles.value.some(file => !file.status || file.status === 'pending')
+)
 
 // 监听输入内容变化，动态调整行数
 watch(messageText, (newValue) => {
@@ -304,8 +411,14 @@ function handleFileSelect(file, fileList) {
   const validation = uploadComposable.validateFile(file.raw)
   
   if (!validation.isValid) {
-    appStore.showError(`文件 "${file.name}" 验证失败: ${validation.errors.join(', ')}`)
-    return
+    // 显示详细的错误信息
+    const errorDetails = validation.errors.map(error => `• ${error}`).join('\n')
+    appStore.showError(`文件 "${file.name}" 验证失败:\n${errorDetails}`, {
+      title: '文件格式或大小错误',
+      duration: 10000, // 显示10秒
+      autoClose: false
+    })
+    return false // 阻止文件被添加到Element Plus的文件列表
   }
 
   // 检查是否已存在
@@ -314,8 +427,19 @@ function handleFileSelect(file, fileList) {
   )
   
   if (exists) {
-    appStore.showWarning(`文件 "${file.name}" 已存在`)
-    return
+    appStore.showWarning(`文件 "${file.name}" 已存在，请选择不同的文件`, {
+      duration: 5000
+    })
+    return false
+  }
+
+  // 获取文件能力信息
+  const capabilities = uploadComposable.getFileCapabilities(file.raw)
+
+  // 创建预览URL
+  let previewUrl = null
+  if (file.raw && file.raw.type.startsWith('image/')) {
+    previewUrl = URL.createObjectURL(file.raw)
   }
 
   // 添加到选中列表
@@ -323,10 +447,26 @@ function handleFileSelect(file, fileList) {
     uid: file.uid,
     name: file.name,
     size: file.size,
-    raw: file.raw
+    type: file.raw?.type,
+    raw: file.raw,
+    status: 'pending',
+    progress: 0,
+    previewUrl,
+    capabilities // 添加能力信息
   })
 
-  appStore.showSuccess(`已添加文件: ${file.name}`)
+  // 根据分析能力显示不同的提示
+  if (capabilities.canAnalyze) {
+    appStore.showSuccess(`已成功添加可分析文件: ${file.name} (${formatFileSize(file.size)})`, {
+      duration: 3000
+    })
+  } else {
+    appStore.showInfo(`已添加文件: ${file.name} (${formatFileSize(file.size)}) - ${capabilities.category.description}`, {
+      duration: 5000
+    })
+  }
+  
+  return true
 }
 
 // 移除文件
@@ -341,8 +481,126 @@ function removeFile(uid) {
 
 // 清空选中的文件
 function clearSelectedFiles() {
+  // 释放预览URL
+  selectedFiles.value.forEach(file => {
+    if (file.previewUrl) {
+      URL.revokeObjectURL(file.previewUrl)
+    }
+  })
+  
   selectedFiles.value = []
   appStore.showInfo('已清空选中的文件')
+}
+
+// 文件类型工具方法
+function getFileTypeIcon(fileType) {
+  const type = fileType?.toLowerCase() || ''
+  
+  if (type.includes('image')) return 'Picture'
+  if (type.includes('pdf')) return 'Document'
+  if (type.includes('text')) return 'DocumentCopy'
+  if (type.includes('video')) return 'VideoPlay'
+  if (type.includes('audio')) return 'Headphones'
+  
+  return 'Document'
+}
+
+function getFileTypeColor(fileType) {
+  const type = fileType?.toLowerCase() || ''
+  
+  if (type.includes('image')) return '#67c23a'
+  if (type.includes('pdf')) return '#f56c6c'
+  if (type.includes('text')) return '#409eff'
+  if (type.includes('video')) return '#e6a23c'
+  if (type.includes('audio')) return '#909399'
+  
+  return '#909399'
+}
+
+function getFileTypeLabel(fileType) {
+  const type = fileType?.toLowerCase() || ''
+  
+  if (type.includes('image')) return '图片'
+  if (type.includes('pdf')) return 'PDF'
+  if (type.includes('text')) return '文本'
+  if (type.includes('video')) return '视频'
+  if (type.includes('audio')) return '音频'
+  
+  return '文件'
+}
+
+function isImageFile(file) {
+  return file.type?.startsWith('image/') || file.raw?.type?.startsWith('image/')
+}
+
+function canPreview(file) {
+  return isImageFile(file) && file.previewUrl
+}
+
+function previewFile(file) {
+  if (file.previewUrl) {
+    window.open(file.previewUrl, '_blank')
+  }
+}
+
+// 批量上传功能
+async function startBatchUpload() {
+  if (!hasPendingFiles.value || isUploading.value) return
+  
+  isUploading.value = true
+  
+  try {
+    const pendingFiles = selectedFiles.value.filter(f => !f.status || f.status === 'pending')
+    
+    for (const file of pendingFiles) {
+      try {
+        await uploadSingleFile(file)
+      } catch (error) {
+        console.error(`文件 ${file.name} 上传失败:`, error)
+      }
+    }
+    
+    const completedFiles = selectedFiles.value.filter(f => f.status === 'completed')
+    if (completedFiles.length > 0) {
+      appStore.showSuccess(`成功上传 ${completedFiles.length} 个文件`)
+    }
+  } finally {
+    isUploading.value = false
+  }
+}
+
+async function uploadSingleFile(file) {
+  file.status = 'uploading'
+  file.progress = 0
+  
+  try {
+    // 模拟上传过程
+    await simulateUpload(file)
+    file.status = 'completed'
+    file.progress = 100
+  } catch (error) {
+    file.status = 'failed'
+    throw error
+  }
+}
+
+function simulateUpload(file) {
+  return new Promise((resolve, reject) => {
+    let progress = 0
+    const interval = setInterval(() => {
+      progress += Math.random() * 15
+      file.progress = Math.min(Math.round(progress), 100)
+      
+      if (progress >= 100) {
+        clearInterval(interval)
+        if (Math.random() > 0.1) {
+          resolve()
+        } else {
+          reject(new Error('模拟上传失败'))
+        }
+      }
+    }, 200)
+  })
 }
 
 // 格式化文件大小
@@ -407,37 +665,196 @@ defineExpose({
   display: inline-block;
 }
 
-.selected-files {
+.enhanced-file-list {
   margin-bottom: 12px;
-  padding: 8px;
+  padding: 12px;
   background: #f8f9fa;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #e4e7ed;
 }
 
-.file-item {
+.file-list-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e4e7ed;
 }
 
-.file-item:not(:last-child) {
-  border-bottom: 1px solid #ebeef5;
-  padding-bottom: 8px;
-  margin-bottom: 4px;
+.file-count {
+  font-size: 14px;
+  font-weight: 500;
+  color: #606266;
+}
+
+.file-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.enhanced-file-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  transition: all 0.3s ease;
+}
+
+.enhanced-file-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.1);
+}
+
+.enhanced-file-item.uploading {
+  border-color: #409eff;
+  background-color: #f0f9ff;
+}
+
+.enhanced-file-item.completed {
+  border-color: #67c23a;
+  background-color: #f0f9ff;
+}
+
+.enhanced-file-item.failed {
+  border-color: #f56c6c;
+  background-color: #fef2f2;
+}
+
+.file-icon {
+  flex-shrink: 0;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .file-name {
-  flex: 1;
-  font-size: 14px;
+  font-weight: 500;
   color: #303133;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
 }
 
-.file-size {
+.file-meta {
   font-size: 12px;
   color: #909399;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.analysis-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  background-color: #f0f9ff;
+  color: #67c23a;
+  border: 1px solid #b3e19d;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background-color: rgba(144, 147, 153, 0.1);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.file-preview {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid #e4e7ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f7fa;
+  transition: all 0.3s ease;
+}
+
+.file-preview:hover {
+  border-color: #409eff;
+  background-color: #f0f9ff;
+}
+
+.preview-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-placeholder {
+  font-size: 12px;
+  color: #909399;
+}
+
+.file-status {
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.status-uploading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-uploading .el-progress {
+  width: 50px;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #409eff;
+  white-space: nowrap;
+}
+
+.status-completed,
+.status-failed,
+.status-pending {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-actions {
+  flex-shrink: 0;
+}
+
+.file-batch-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e4e7ed;
+}
+
+.batch-info {
+  font-size: 14px;
+  color: #606266;
+}
+
+.batch-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .input-area {

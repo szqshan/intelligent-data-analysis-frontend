@@ -10,8 +10,65 @@ export const useAppStore = defineStore('app', () => {
   const appConfig = ref({
     title: '智能数据分析平台',
     version: '1.0.0',
-    maxFileSize: 10 * 1024 * 1024, // 10MB
-    allowedFileTypes: ['.csv', '.xlsx', '.xls', '.json', '.txt'],
+    maxFileSize: 500 * 1024 * 1024, // 500MB
+    allowedFileTypes: [
+      // 数据文件
+      '.csv', '.xlsx', '.xls', '.json', '.txt',
+      // 文档文件
+      '.pdf', '.doc', '.docx', '.ppt', '.pptx',
+      // 图片文件
+      '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp',
+      // 视频文件
+      '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm',
+      // 音频文件
+      '.mp3', '.wav', '.flac', '.aac', '.ogg',
+      // 其他数据格式
+      '.xml', '.yaml', '.yml', '.sql', '.log',
+      // 压缩文件
+      '.zip', '.rar', '.7z', '.tar', '.gz'
+    ],
+    // 当前后端支持数据分析的格式
+    analyticalFileTypes: [
+      '.csv'  // 目前只支持CSV数据分析
+    ],
+    // 文件格式分类
+    fileTypeCategories: {
+      analytical: {
+        types: ['.csv'],
+        label: '可分析数据',
+        description: '支持智能数据分析和多轮对话',
+        icon: 'DataAnalysis',
+        color: '#67c23a'
+      },
+      data: {
+        types: ['.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml', '.sql', '.log'],
+        label: '数据文件',
+        description: '暂不支持分析，仅支持上传存储',
+        icon: 'Document',
+        color: '#409eff'
+      },
+      document: {
+        types: ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt'],
+        label: '文档文件',
+        description: '支持上传存储，未来可能支持内容分析',
+        icon: 'Document',
+        color: '#f56c6c'
+      },
+      media: {
+        types: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mp3', '.wav', '.flac', '.aac', '.ogg'],
+        label: '多媒体',
+        description: '支持上传存储，未来可能支持内容识别',
+        icon: 'Picture',
+        color: '#e6a23c'
+      },
+      archive: {
+        types: ['.zip', '.rar', '.7z', '.tar', '.gz'],
+        label: '压缩文件',
+        description: '支持上传存储',
+        icon: 'Box',
+        color: '#909399'
+      }
+    },
     maxConversations: 50
   })
   const notifications = ref([])
@@ -90,8 +147,65 @@ export const useAppStore = defineStore('app', () => {
     appConfig.value = {
       title: '智能数据分析平台',
       version: '1.0.0',
-      maxFileSize: 10 * 1024 * 1024,
-      allowedFileTypes: ['.csv', '.xlsx', '.xls', '.json', '.txt'],
+      maxFileSize: 500 * 1024 * 1024,
+      allowedFileTypes: [
+        // 数据文件
+        '.csv', '.xlsx', '.xls', '.json', '.txt',
+        // 文档文件
+        '.pdf', '.doc', '.docx', '.ppt', '.pptx',
+        // 图片文件
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp',
+        // 视频文件
+        '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm',
+        // 音频文件
+        '.mp3', '.wav', '.flac', '.aac', '.ogg',
+        // 其他数据格式
+        '.xml', '.yaml', '.yml', '.sql', '.log',
+        // 压缩文件
+        '.zip', '.rar', '.7z', '.tar', '.gz'
+      ],
+      // 当前后端支持数据分析的格式
+      analyticalFileTypes: [
+        '.csv'  // 目前只支持CSV数据分析
+      ],
+      // 文件格式分类
+      fileTypeCategories: {
+        analytical: {
+          types: ['.csv'],
+          label: '可分析数据',
+          description: '支持智能数据分析和多轮对话',
+          icon: 'DataAnalysis',
+          color: '#67c23a'
+        },
+        data: {
+          types: ['.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml', '.sql', '.log'],
+          label: '数据文件',
+          description: '暂不支持分析，仅支持上传存储',
+          icon: 'Document',
+          color: '#409eff'
+        },
+        document: {
+          types: ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt'],
+          label: '文档文件',
+          description: '支持上传存储，未来可能支持内容分析',
+          icon: 'Document',
+          color: '#f56c6c'
+        },
+        media: {
+          types: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mp3', '.wav', '.flac', '.aac', '.ogg'],
+          label: '多媒体',
+          description: '支持上传存储，未来可能支持内容识别',
+          icon: 'Picture',
+          color: '#e6a23c'
+        },
+        archive: {
+          types: ['.zip', '.rar', '.7z', '.tar', '.gz'],
+          label: '压缩文件',
+          description: '支持上传存储',
+          icon: 'Box',
+          color: '#909399'
+        }
+      },
       maxConversations: 50
     }
   }
@@ -160,7 +274,7 @@ export const useAppStore = defineStore('app', () => {
   function showError(message, options = {}) {
     return addNotification({
       type: 'error',
-      title: '错误',
+      title: '文件上传错误',
       message,
       autoClose: false,
       ...options
@@ -172,7 +286,7 @@ export const useAppStore = defineStore('app', () => {
       type: 'warning',
       title: '警告',
       message,
-      duration: 5000,
+      duration: 8000,
       ...options
     })
   }
