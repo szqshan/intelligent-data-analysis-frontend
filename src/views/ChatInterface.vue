@@ -1,338 +1,265 @@
 <template>
-  <div class="chat-container">
-    <!-- 聊天消息区域 -->
-    <div class="chat-messages" ref="messagesContainer">
-      <div v-for="message in messages" :key="message.id" class="message-wrapper">
-        <div :class="['message', message.role]">
-          <div class="message-avatar">
-            <el-avatar :size="32">
-              <el-icon v-if="message.role === 'user'"><User /></el-icon>
-              <el-icon v-else><Cpu /></el-icon>
-            </el-avatar>
-          </div>
-          <div class="message-content">
-            <div class="message-text" v-html="formatMessage(message.content)"></div>
-            <div v-if="message.tools && message.tools.length > 0" class="tool-calls">
-              <div v-for="tool in message.tools" :key="tool.id" class="tool-call">
-                <el-tag type="info" size="small">
-                  <el-icon><Tools /></el-icon>
-                  {{ tool.name }}
-                </el-tag>
-              </div>
-            </div>
-            <div class="message-time">
-              {{ formatTime(message.timestamp) }}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 加载状态 -->
-      <div v-if="isLoading" class="message-wrapper">
-        <div class="message assistant">
-          <div class="message-avatar">
-            <el-avatar :size="32">
-              <el-icon><Cpu /></el-icon>
-            </el-avatar>
-          </div>
-          <div class="message-content">
-            <div class="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="chat-interface">
+    <!-- 消息列表区域 -->
+    <div class="messages-area">
+      <MessageList
+        :messages="messages"
+        :is-loading="isLoading"
+        :auto-scroll="true"
+        @resend-message="handleResendMessage"
+        @delete-message="handleDeleteMessage"
+        ref="messageListRef"
+      />
     </div>
 
     <!-- 输入区域 -->
-    <div class="chat-input">
-      <el-input
-        v-model="currentMessage"
-        type="textarea"
-        :rows="3"
-        placeholder="请输入您的问题..."
-        @keyup.ctrl.enter="sendMessage"
-        :disabled="isLoading"
+    <div class="input-area">
+      <MessageInput
+        :messages="messages"
+        :is-loading="isLoading"
+        @send-message="handleSendMessage"
+        @clear-messages="handleClearMessages"
+        @export-chat="handleExportChat"
+        @upload-files="handleUploadFiles"
+        ref="messageInputRef"
       />
-      <div class="input-actions">
-        <el-button-group>
-          <el-button @click="clearChat" :disabled="isLoading">
-            <el-icon><Delete /></el-icon>
-            清空对话
-          </el-button>
-          <el-button @click="exportChat" :disabled="messages.length === 0">
-            <el-icon><Download /></el-icon>
-            导出对话
-          </el-button>
-        </el-button-group>
-        <el-button type="primary" @click="sendMessage" :disabled="!currentMessage.trim() || isLoading">
-          <el-icon><Promotion /></el-icon>
-          发送 (Ctrl+Enter)
-        </el-button>
-      </div>
     </div>
+
+    <!-- 全局加载遮罩 -->
+    <el-loading 
+      v-loading="globalLoading"
+      :text="loadingText"
+      element-loading-background="rgba(0, 0, 0, 0.8)"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
-import { marked } from 'marked'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/github.css'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ElMessageBox } from 'element-plus'
+import { useChatStore } from '@/stores/chat'
+import { useUserStore } from '@/stores/user'
+import { useAppStore } from '@/stores/app'
+import { useChat } from '@/composables/useChat'
+import { useUpload } from '@/composables/useUpload'
+import MessageList from '@/components/Chat/MessageList.vue'
+import MessageInput from '@/components/Chat/MessageInput.vue'
 
-// 响应式数据
-const messages = ref([])
-const currentMessage = ref('')
-const isLoading = ref(false)
-const messagesContainer = ref(null)
+// Stores
+const chatStore = useChatStore()
+const userStore = useUserStore()
+const appStore = useAppStore()
 
-// 配置marked
-marked.setOptions({
-  highlight: function(code, lang) {
-    const language = hljs.getLanguage(lang) ? lang : 'plaintext'
-    return hljs.highlight(code, { language }).value
-  },
-  langPrefix: 'hljs language-'
-})
+// Composables
+const chat = useChat()
+const upload = useUpload()
 
-// 示例消息
-onMounted(() => {
-  messages.value = [
-    {
-      id: 1,
-      role: 'assistant',
-      content: '您好！我是智能数据分析助手。我可以帮您：\n\n- 📊 分析数据并生成可视化图表\n- 📈 创建数据报告和洞察\n- 🔧 调用各种数据处理工具\n- 💡 提供数据分析建议\n\n请告诉我您需要什么帮助？',
-      timestamp: new Date(),
-      tools: []
+// 响应式引用
+const messageListRef = ref(null)
+const messageInputRef = ref(null)
+
+// 计算属性
+const messages = computed(() => chat.messages.value)
+const isLoading = computed(() => chat.isLoading.value || chat.isStreaming.value)
+const globalLoading = computed(() => appStore.globalLoading)
+const loadingText = computed(() => appStore.loadingText)
+
+// 初始化聊天
+async function initializeChat() {
+  try {
+    if (!userStore.isAuthenticated) {
+      appStore.showError('请先登录后再使用聊天功能')
+      return
     }
-  ]
-})
 
-// 格式化消息内容
-const formatMessage = (content) => {
-  return marked(content)
+    await chat.initializeChat()
+    appStore.showSuccess('聊天初始化成功')
+  } catch (error) {
+    console.error('初始化聊天失败:', error)
+    appStore.showError(`初始化聊天失败: ${error.message}`)
+  }
 }
 
-// 格式化时间
-const formatTime = (timestamp) => {
-  return new Date(timestamp).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit'
+// 处理发送消息
+async function handleSendMessage(content, options = {}) {
+  try {
+    if (!content.trim()) {
+      appStore.showWarning('请输入消息内容')
+      return
+    }
+
+    await chat.sendMessage(content, options)
+    
+    // 滚动到底部
+    if (messageListRef.value) {
+      messageListRef.value.scrollToBottom()
+    }
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    // 错误处理已在useChat中完成
+  }
+}
+
+// 处理重新发送消息
+async function handleResendMessage(messageId) {
+  try {
+    await chat.resendMessage(messageId)
+  } catch (error) {
+    console.error('重新发送消息失败:', error)
+  }
+}
+
+// 处理删除消息
+function handleDeleteMessage(messageId) {
+  chatStore.removeMessage(messageId)
+  appStore.showSuccess('消息已删除')
+}
+
+// 处理清空消息
+function handleClearMessages() {
+  ElMessageBox.confirm(
+    '确定要清空当前对话的所有消息吗？此操作不可恢复。',
+    '确认清空',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(() => {
+    chat.clearCurrentMessages()
+  }).catch(() => {
+    // 用户取消
   })
 }
 
-// 发送消息
-const sendMessage = async () => {
-  if (!currentMessage.value.trim() || isLoading.value) return
-
-  const userMessage = {
-    id: Date.now(),
-    role: 'user',
-    content: currentMessage.value,
-    timestamp: new Date(),
-    tools: []
-  }
-
-  messages.value.push(userMessage)
-  const messageText = currentMessage.value
-  currentMessage.value = ''
-  isLoading.value = true
-
-  // 滚动到底部
-  await nextTick()
-  scrollToBottom()
-
+// 处理导出对话
+function handleExportChat() {
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    const assistantMessage = {
-      id: Date.now(),
-      role: 'assistant',
-      content: `您提到了："${messageText}"\n\n这是一个很好的问题！让我为您分析一下：\n\n\`\`\`python\n# 示例代码\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n# 数据处理示例\ndf = pd.read_csv('data.csv')\nresult = df.groupby('category').sum()\nprint(result)\n\`\`\`\n\n**分析结果：**\n- 数据量：1000条记录\n- 主要趋势：呈上升态势\n- 建议：继续观察数据变化`,
-      timestamp: new Date(),
-      tools: [
-        { id: 1, name: 'pandas_analyzer' },
-        { id: 2, name: 'chart_generator' }
-      ]
-    }
-
-    messages.value.push(assistantMessage)
-    await nextTick()
-    scrollToBottom()
+    chat.exportConversation()
   } catch (error) {
-    console.error('发送消息失败:', error)
-  } finally {
-    isLoading.value = false
+    console.error('导出对话失败:', error)
+    appStore.showError('导出对话失败')
   }
 }
 
-// 滚动到底部
-const scrollToBottom = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+// 处理文件上传
+async function handleUploadFiles(files) {
+  try {
+    // 添加文件到上传队列
+    const uploadItems = upload.addToUploadQueue(files)
+    
+    if (uploadItems.length > 0) {
+      // 开始上传
+      await upload.uploadFiles()
+      
+      // 可以在这里处理上传成功后的逻辑
+      // 比如自动发送消息提及已上传的文件
+      const fileNames = uploadItems.map(item => item.fileName).join(', ')
+      const message = `已上传文件: ${fileNames}`
+      
+      // 可选：自动发送一条消息
+      // await handleSendMessage(message)
+    }
+  } catch (error) {
+    console.error('文件上传失败:', error)
+    appStore.showError('文件上传失败')
   }
 }
 
-// 清空对话
-const clearChat = () => {
-  messages.value = []
-}
-
-// 导出对话
-const exportChat = () => {
-  const chatContent = messages.value.map(msg => 
-    `${msg.role === 'user' ? '用户' : '助手'} [${formatTime(msg.timestamp)}]:\n${msg.content}\n\n`
-  ).join('')
+// 键盘快捷键处理
+function handleKeyboardShortcuts(event) {
+  // Ctrl/Cmd + N: 新建对话
+  if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+    event.preventDefault()
+    createNewConversation()
+  }
   
-  const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `对话记录_${new Date().toISOString().split('T')[0]}.txt`
-  a.click()
-  URL.revokeObjectURL(url)
+  // Ctrl/Cmd + E: 导出对话
+  if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+    event.preventDefault()
+    handleExportChat()
+  }
+  
+  // Ctrl/Cmd + K: 清空对话
+  if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+    event.preventDefault()
+    handleClearMessages()
+  }
 }
+
+// 创建新对话
+async function createNewConversation() {
+  try {
+    const conversation = await chat.createConversation('新对话')
+    appStore.showSuccess(`新对话 "${conversation.title}" 创建成功`)
+    
+    // 聚焦输入框
+    if (messageInputRef.value) {
+      messageInputRef.value.focusInput()
+    }
+  } catch (error) {
+    console.error('创建新对话失败:', error)
+  }
+}
+
+// 组件挂载
+onMounted(async () => {
+  // 初始化应用状态
+  appStore.initApp()
+  
+  // 初始化聊天
+  await initializeChat()
+  
+  // 添加键盘事件监听
+  document.addEventListener('keydown', handleKeyboardShortcuts)
+  
+  // 聚焦输入框
+  if (messageInputRef.value) {
+    messageInputRef.value.focusInput()
+  }
+})
+
+// 组件卸载
+onUnmounted(() => {
+  // 移除键盘事件监听
+  document.removeEventListener('keydown', handleKeyboardShortcuts)
+})
 </script>
 
 <style scoped>
-.chat-container {
+.chat-interface {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: #f5f5f5;
+  height: 100vh;
+  background: #f8f9fa;
 }
 
-.chat-messages {
+.messages-area {
   flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  padding-bottom: 10px;
+  overflow: hidden;
+  position: relative;
 }
 
-.message-wrapper {
-  margin-bottom: 20px;
-}
-
-.message {
-  display: flex;
-  gap: 12px;
-  max-width: 80%;
-}
-
-.message.user {
-  margin-left: auto;
-  flex-direction: row-reverse;
-}
-
-.message.user .message-content {
-  background: #409eff;
-  color: white;
-}
-
-.message.assistant .message-content {
-  background: white;
-  border: 1px solid #e4e7ed;
-}
-
-.message-content {
-  padding: 12px 16px;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.message-text {
-  line-height: 1.5;
-  word-wrap: break-word;
-}
-
-.message-text :deep(pre) {
-  background: #f6f8fa;
-  padding: 12px;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: 10px 0;
-}
-
-.message-text :deep(code) {
-  background: #f6f8fa;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-size: 0.9em;
-}
-
-.tool-calls {
-  margin-top: 8px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.message-time {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 8px;
-}
-
-.message.user .message-time {
-  color: rgba(255,255,255,0.8);
-}
-
-.typing-indicator {
-  display: flex;
-  gap: 4px;
-}
-
-.typing-indicator span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #909399;
-  animation: typing 1.4s infinite ease-in-out;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes typing {
-  0%, 80%, 100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.chat-input {
-  padding: 20px;
-  background: white;
+.input-area {
+  flex-shrink: 0;
   border-top: 1px solid #e4e7ed;
+  background: white;
 }
 
-.input-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
-}
-
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .message {
-    max-width: 95%;
+  .chat-interface {
+    height: 100vh;
   }
-  
-  .input-actions {
-    flex-direction: column;
-    gap: 10px;
-  }
+}
+
+/* 暗色主题支持 */
+[data-theme="dark"] .chat-interface {
+  background: #1a1a1a;
+}
+
+[data-theme="dark"] .input-area {
+  background: #1f1f1f;
+  border-top-color: #3a3a3a;
 }
 </style> 
